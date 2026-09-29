@@ -1,0 +1,39 @@
+{
+  "name": "x402-conform",
+  "version": "0.1.0",
+  "description": "Zero-dependency conformance test suite for x402 resource servers and facilitators (v1 and v2).",
+  "type": "module",
+  "bin": {
+    "x402-conform": "./dist/src/cli.js"
+  },
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && chmod +x dist/src/cli.js",
+    "test": "npm run build && node --test dist/test/conformance.test.js",
+    "demo": "npm run build && node dist/src/fixtures/reference-server.js --port 4020 & sleep 0.5; node dist/src/cli.js server http://127.0.0.1:4020/paid; node dist/src/cli.js facilitator http://127.0.0.1:4020/facilitator; kill %1",
+    "lint": "tsc -p tsconfig.json --noEmit"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "x402",
+    "coinbase",
+    "payments",
+    "conformance",
+    "http-402",
+    "base",
+    "usdc"
+  ],
+  "license": "MIT",
+  "author": "Jaydon Chua",
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "@types/node": "^22.0.0"
+  }
+}
