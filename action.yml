@@ -1,0 +1,25 @@
+name: x402-conform
+description: Run x402 protocol conformance checks against a resource server or facilitator
+branding: { icon: check-circle, color: blue }
+inputs:
+  target:
+    description: URL of the paid resource or facilitator base URL
+    required: true
+  kind:
+    description: "server" or "facilitator"
+    required: false
+    default: server
+  auth:
+    description: Optional Authorization header value for authenticated facilitators
+    required: false
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with: { node-version: 22 }
+    - shell: bash
+      run: |
+        cd "${{ github.action_path }}"
+        npm ci --ignore-scripts && npm run build
+        AUTH="${{ inputs.auth }}"
+        node dist/src/cli.js "${{ inputs.kind }}" "${{ inputs.target }}" --md ${AUTH:+--auth "$AUTH"} | tee -a "$GITHUB_STEP_SUMMARY"

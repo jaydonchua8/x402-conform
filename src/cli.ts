@@ -5,6 +5,7 @@
  *   x402-conform server <url>        [--v1|--v2] [--method POST] [--samples 5] [--json|--md] [--timeout 10000]
  *   x402-conform facilitator <url>   [--auth "Bearer …"] [--json|--md]
  *   x402-conform crawl <file.json>   [--concurrency 8] [--md]        (Bazaar/list of resource URLs)
+ *   x402-conform crawl --bazaar      [--limit 200] [--concurrency 8] [--md]   (fetch the live CDP Bazaar index)
  *
  * Exit code: 0 when no FAIL results, 1 otherwise, 2 on usage error.
  */
@@ -28,7 +29,8 @@ function usage(code = 2): never {
   console.error(`usage:
   x402-conform server <url> [--v1|--v2] [--method GET] [--samples 5] [--timeout ms] [--json|--md]
   x402-conform facilitator <url> [--auth "Bearer <token>"] [--timeout ms] [--json|--md]
-  x402-conform crawl <urls.json|urls.txt> [--concurrency 8] [--json|--md]`);
+  x402-conform crawl <urls.json|urls.txt> [--concurrency 8] [--json|--md]
+  x402-conform crawl --bazaar [--limit 200] [--concurrency 8] [--json|--md]`);
   process.exit(code);
 }
 
@@ -39,7 +41,7 @@ function emit(rep: Report) {
 }
 
 async function main() {
-  if (!cmd || !target || has("help")) usage(cmd ? 2 : 0);
+  if (!cmd || has("help") || (!target && !(cmd === "crawl" && has("bazaar")))) usage(cmd ? 2 : 0);
   const timeoutMs = flag("timeout") ? Number(flag("timeout")) : undefined;
 
   if (cmd === "server") {
@@ -58,7 +60,8 @@ async function main() {
   }
 
   if (cmd === "crawl") {
-    const urls = loadUrls(target);
+    const urls = has("bazaar") ? await fetchBazaar(Number(flag("limit") ?? 200), timeoutMs ?? 15_000) : loadUrls(target);
+    if (urls.length === 0) { console.error("no endpoints to crawl"); process.exit(2); }
     const conc = Number(flag("concurrency") ?? 8);
     const reports: Report[] = [];
     let i = 0;
@@ -85,6 +88,30 @@ async function main() {
   }
 
   usage();
+}
+
+/** CDP Bazaar discovery index. Paginates until `limit` resources are collected. */
+async function fetchBazaar(limit: number, timeoutMs: number): Promise<string[]> {
+  const base = process.env.X402_BAZAAR_URL ?? "https://api.cdp.coinbase.com/platform/v2/x402/discovery/resources";
+  const out: string[] = [];
+  let offset = 0;
+  while (out.length < limit) {
+    const url = `${base}?limit=${Math.min(100, limit - out.length)}&offset=${offset}`;
+    const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), timeoutMs);
+    let page: { items?: Array<{ resource?: string; url?: string }>; pagination?: { total?: number } };
+    try {
+      const res = await fetch(url, { signal: ctrl.signal, headers: { accept: "application/json" } });
+      if (!res.ok) { console.error(`bazaar: HTTP ${res.status} from ${url}`); break; }
+      page = await res.json();
+    } catch (e) { console.error(`bazaar: ${(e as Error).message}`); break; } finally { clearTimeout(t); }
+    const items = page.items ?? [];
+    if (items.length === 0) break;
+    for (const it of items) { const u = it.resource ?? it.url; if (u && !out.includes(u)) out.push(u); }
+    offset += items.length;
+    if (page.pagination?.total !== undefined && offset >= page.pagination.total) break;
+  }
+  console.error(`bazaar: ${out.length} resource(s) fetched`);
+  return out;
 }
 
 /** Accepts: a newline list of URLs, a JSON array of strings, or a Bazaar-style discovery document. */

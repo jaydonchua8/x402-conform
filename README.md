@@ -107,10 +107,22 @@ The suite asserts two things for each protocol version: the clean reference serv
 ## Crawl mode
 
 ```bash
-x402-conform crawl endpoints.txt --concurrency 8 --md > report.md
+x402-conform crawl --bazaar --limit 200 --md > bazaar-health.md   # live CDP Bazaar index
+x402-conform crawl endpoints.txt --concurrency 8 --md > report.md  # your own list
 ```
 
 Accepts a newline list of URLs, a JSON array, or a Bazaar-style `{ items: [{ resource }] }` document. Produces a ranked table: score, reachability, protocol version, failing checks. Use it to answer "how much of the index is actually alive and spec-compliant?"
+
+## GitHub Action
+
+```yaml
+- uses: jaydonchua8/x402-conform@main
+  with:
+    target: https://api.example.com/paid
+    kind: server
+```
+
+The Markdown report lands in the job summary; the step fails when any check fails.
 
 ## Output formats
 
@@ -128,7 +140,6 @@ Accepts a newline list of URLs, a JSON array, or a Bazaar-style `{ items: [{ res
 - `--key` for a real testnet payment (positive-path settle, `PAYMENT-RESPONSE` header validation)
 - `upto` scheme checks once its spec lands
 - SVM `exact` payload probes
-- GitHub Action wrapper
 
 ## License
 
