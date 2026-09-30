@@ -20,6 +20,6 @@ runs:
     - shell: bash
       run: |
         cd "${{ github.action_path }}"
-        npm ci --ignore-scripts && npm run build
+        npm install --ignore-scripts && npm run build
         AUTH="${{ inputs.auth }}"
         node dist/src/cli.js "${{ inputs.kind }}" "${{ inputs.target }}" --md ${AUTH:+--auth "$AUTH"} | tee -a "$GITHUB_STEP_SUMMARY"
