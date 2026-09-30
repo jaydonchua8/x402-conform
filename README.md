@@ -20,6 +20,23 @@ x402 has one spec and (as of Sept 2026) at least seven facilitators and hundreds
 
 Stripe has a test-mode and a webhook CLI; x402 sellers have `curl`. This is the missing lint step.
 
+## Findings (Bazaar crawl, 2026-09-29)
+
+`x402-conform crawl --bazaar --limit 200` against the live CDP Bazaar index:
+
+| | Count | Share |
+|---|---|---|
+| Listings crawled | 200 | |
+| Reachable and returning `402` | 175 | 87% |
+| Not returning `402` (dead, or serving content free) | 25 | 13% |
+| Serving paid content with **no payment attached** (S14) | 2 | 1% |
+| Reachable but failing ≥1 spec check | 19 | 10% |
+| **Failing ≥1 check overall** | **44** | **22%** |
+
+Failure classes among reachable endpoints: non-CAIP-2 `network` in a v2 response (S07, 7 endpoints), unsupported `x402Version` not rejected with a 4xx (S13, 8), `5xx` on a malformed payment header (S12, 4 — one operator), non-integer `amount` (S06, 2).
+
+Caveats: a handful of listings are URL templates (`/:address`, `/:hash`) that can't be probed with a bare GET and show as unreachable; the crawl is a single pass, not 7-day uptime. Full table: `docs/bazaar-2026-09-29.md`.
+
 ## Install / run
 
 ```bash
